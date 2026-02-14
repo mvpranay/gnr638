@@ -31,7 +31,13 @@ PYBIND11_MODULE(APDNN, m) {
             }
             s += "]>";
             return s;
-        });
+        })
+        // Overloading operators for Python
+        .def("__add__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return add(a, b); })
+        .def("__sub__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return sub(a, b); })
+        .def("__mul__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return mult(a, b); })
+        .def("__truediv__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return div(a, b); })
+        .def("__matmul__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return matmul(a, b); });
 
     // Tensor operators - use lambdas to avoid ambiguity
     m.def("add", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { 
