@@ -213,6 +213,31 @@ std::shared_ptr<Tensor> relu(std::shared_ptr<Tensor> a) {
     return res;
 }
 
+shared_ptr<Tensor> mse_loss(shared_ptr<Tensor> pred, shared_ptr<Tensor> target) {
+    if (pred->data.size() != target->data.size()) throw runtime_error("MSE shape mismatch");
+    
+    int n = (int)pred->data.size();
+    float diff_sum = 0;
+    vector<float> diffs(n);
+
+    for (int i = 0; i < n; i++) {
+        float d = pred->data[i] - target->data[i];
+        diffs[i] = d;
+        diff_sum += d * d;
+    }
+
+    auto res = make_shared<Tensor>(vector<float>{diff_sum / n}, vector<int>{1, 1});
+    res->parents = {pred};
+
+    res->backward_operation = [res, pred, target, n, diffs]() {
+        for (int i = 0; i < n; i++) {
+            // Derivative of (1/n) * (p - t)^2 is (2/n) * (p - t)
+            pred->grad[i] += (2.0f / n) * diffs[i] * res->grad[0];
+        }
+    };
+    return res;
+}
+
 // Non-member operator overload
 shared_ptr<Tensor> operator+(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) {
 	return add(a, b); 

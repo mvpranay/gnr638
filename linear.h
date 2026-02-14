@@ -39,3 +39,26 @@ public:
         return {weights, bias};
     }
 };
+
+class SGD {
+public:
+    float lr;
+    vector<shared_ptr<Tensor>> params;
+
+    SGD(vector<shared_ptr<Tensor>> p, float learning_rate) 
+        : params(p), lr(learning_rate) {}
+
+    void step() {
+        for (auto& p : params) {
+            for (int i = 0; i < p->data.size(); i++) {
+                p->data[i] -= lr * p->grad[i];
+            }
+        }
+    }
+
+    void zero_grad() {
+        for (auto& p : params) {
+            fill(p->grad.begin(), p->grad.end(), 0.0f);
+        }
+    }
+};
