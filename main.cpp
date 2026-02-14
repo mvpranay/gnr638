@@ -1,15 +1,20 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-#include <cassert>
-#include "linear.h"
+#include "linear.hpp"
+#include "optimizer.hpp"
+#include "loss.hpp"
 
-void print_tensor(const string& name, shared_ptr<Tensor> t) {
-    cout << name << " (data): ";
-    for (float val : t->data) cout << val << " ";
-    cout << "\n" << name << " (grad): ";
-    for (float val : t->grad) cout << val << " ";
-    cout << "\n\n";
+void print_tensor(const std::string &name, std::shared_ptr<Tensor> t)
+{
+    std::cout << name << " (data): ";
+    for (float val : t->data)
+        std::cout << val << " ";
+    std::cout << "\n"
+              << name << " (grad): ";
+    for (float val : t->grad)
+        std::cout << val << " ";
+    std::cout << "\n\n";
 }
 
 int main() {
