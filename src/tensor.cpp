@@ -49,7 +49,6 @@ std::shared_ptr<Tensor> Tensor::flatten() {
 }
 
 std::shared_ptr<Tensor> Tensor::view(std::vector<int> new_shape) {
-    // verify number of elements remaining the same
     int new_size = 1;
     for (int s : new_shape) new_size *= s;
     if (new_size != (int)this->data.size()) {
@@ -57,16 +56,21 @@ std::shared_ptr<Tensor> Tensor::view(std::vector<int> new_shape) {
     }
 
     auto res = std::make_shared<Tensor>(this->data, new_shape);
-    
     res->parents = { shared_from_this() };
-    res->backward_operation = [res, self = shared_from_this()]() {
-        for (size_t i = 0; i < self->grad.size(); i++) {
-            self->grad[i] += res->grad[i];
+
+    // Capture the raw pointer to the gradient vector's internal array
+    float* res_grad_ptr = res->grad.data();
+    auto self = shared_from_this(); // Parent is safe to capture as shared_ptr
+    size_t grad_size = self->grad.size();
+
+    res->backward_operation = [res_grad_ptr, self, grad_size]() {
+        for (size_t i = 0; i < grad_size; i++) {
+            // Simply map the flat gradient back to the parent
+            self->grad[i] += res_grad_ptr[i];
         }
     };
     return res;
 }
-
 // Non-member operator overload
 std::shared_ptr<Tensor> operator+(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) {
 	return add(a, b); 

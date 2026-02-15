@@ -18,9 +18,13 @@ std::shared_ptr<Tensor> mse_loss(std::shared_ptr<Tensor> pred, std::shared_ptr<T
     auto res = std::make_shared<Tensor>(std::vector<float>{diff_sum / n}, std::vector<int>{1, 1});
     res->parents = {pred};
 
-    res->backward_operation = [res, pred, n, diffs]() {
+    float* res_grad_ptr = res->grad.data();
+
+    res->backward_operation = [res_grad_ptr, pred, n, diffs]() {
+        float upstream_grad = res_grad_ptr[0];
+        
         for (int i = 0; i < n; i++) {
-            pred->grad[i] += (2.0f / n) * diffs[i] * res->grad[0];
+            pred->grad[i] += (2.0f / n) * diffs[i] * upstream_grad;
         }
     };
     return res;
@@ -55,8 +59,11 @@ std::shared_ptr<Tensor> cross_entropy_loss(std::shared_ptr<Tensor> logits, const
     auto res = std::make_shared<Tensor>(std::vector<float>{total_loss / batch_size}, std::vector<int>{1, 1});
     res->parents = {logits};
 
-    res->backward_operation = [res, logits, probs, targets, batch_size, features]() {
-        float upstream_grad = res->grad[0]; 
+    float* res_grad_ptr = res->grad.data();
+    
+    res->backward_operation = [res_grad_ptr, logits, probs, targets, batch_size, features]() {
+        float upstream_grad = res_grad_ptr[0]; 
+        
         for (int b = 0; b < batch_size; b++) {
             for (int f = 0; f < features; f++) {
                 float p = probs[b * features + f];
