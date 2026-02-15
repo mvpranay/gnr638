@@ -90,6 +90,9 @@ PYBIND11_MODULE(APDNN, m) {
         .def_readwrite("stride", &Conv2D::stride)
         .def_readwrite("padding", &Conv2D::padding);
 
+    // Max pooling
+    m.def("maxpool2d", &maxpool2d, py::arg("a"), py::arg("pool_size") = 2, py::arg("stride") = 2);
+
     // Optimizer
     py::class_<SGD>(m, "SGD")
         .def(py::init<std::vector<std::shared_ptr<Tensor>>, float>())

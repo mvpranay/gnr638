@@ -469,3 +469,70 @@ std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Te
 
     return res;
 }
+
+std::shared_ptr<Tensor> maxpool2d(std::shared_ptr<Tensor> a, int pool_size, int stride) {
+    int B = a->shape[0];
+    int C = a->shape[1];
+    int H = a->shape[2];
+    int W = a->shape[3];
+
+    int OH = (H - pool_size) / stride + 1;
+    int OW = (W - pool_size) / stride + 1;
+
+    std::vector<float> res_data(B * C * OH * OW);
+    // need to store argmax for gradient back propagation
+    std::vector<int> max_indices(B * C * OH * OW);
+
+    for (int b = 0; b < B; ++b) {
+        int batch_offset = b * C * H * W;
+        int res_batch_offset = b * C * OH * OW;
+
+        for (int c = 0; c < C; ++c) {
+            int channel_offset = batch_offset + (c * H * W);
+            int res_channel_offset = res_batch_offset + (c * OH * OW);
+
+            for (int i = 0; i < OH; ++i) {
+                int res_row_offset = res_channel_offset + (i * OW);
+                int ih_base = i * stride;
+
+                for (int j = 0; j < OW; ++j) {
+                    int iw_base = j * stride;
+                    
+                    float max_val = -1e9f;
+                    int max_idx = -1;
+
+                    for (int pi = 0; pi < pool_size; ++pi) {
+                        int ih = ih_base + pi;
+                        int row_offset = channel_offset + (ih * W);
+
+                        for (int pj = 0; pj < pool_size; ++pj) {
+                            int iw = iw_base + pj;
+                            int curr_idx = row_offset + iw;
+                            
+                            if (a->data[curr_idx] > max_val) {
+                                max_val = a->data[curr_idx];
+                                max_idx = curr_idx;
+                            }
+                        }
+                    }
+                    res_data[res_row_offset + j] = max_val;
+                    max_indices[res_row_offset + j] = max_idx;
+                }
+            }
+        }
+    }
+
+    auto res = std::make_shared<Tensor>(std::move(res_data), std::vector<int>{B, C, OH, OW});
+    res->parents = {a};
+
+    // --- Backward Pass ---
+    // The gradient only flows to the specific 'max' pixels found in forward
+    res->backward_operation = [res, a, max_indices]() {
+        for (size_t i = 0; i < res->grad.size(); ++i) {
+            int original_idx = max_indices[i];
+            a->grad[original_idx] += res->grad[i];
+        }
+    };
+
+    return res;
+}
