@@ -104,6 +104,10 @@ PYBIND11_MODULE(APDNN, m) {
     m.def("mse_loss", [](std::shared_ptr<Tensor> pred, std::shared_ptr<Tensor> target) { 
         return mse_loss(pred, target); 
     }, "Mean Squared Error loss");
+
+    m.def("cross_entropy_loss", [](std::shared_ptr<Tensor> logits, std::vector<int> targets) { 
+        return cross_entropy_loss(logits, targets); 
+    }, "Cross Entropy Loss for classification", py::arg("logits"), py::arg("targets"));
     
     m.def("set_random_seed", &set_random_seed, "Set random seed for initialization");
 }

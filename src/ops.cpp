@@ -14,12 +14,16 @@ std::shared_ptr<Tensor> add(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b]()
+        // Capture a raw pointer to result's grad vector to avoid a circular shared_ptr reference
+        float* res_grad_ptr = result->grad.data();
+        size_t data_size = result->data.size();
+
+        result->backward_operation = [res_grad_ptr, a, b, data_size]()
         {
-            for (size_t i = 0; i < result->data.size(); i++)
+            for (size_t i = 0; i < data_size; i++)
             {
-                a->grad[i] += result->grad[i];
-                b->grad[i] += result->grad[i];
+                a->grad[i] += res_grad_ptr[i];
+                b->grad[i] += res_grad_ptr[i];
             }
         };
 
@@ -44,14 +48,19 @@ std::shared_ptr<Tensor> add(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b, batch_size, features]()
+        // Capture the raw pointer to the gradient data and the dimensions
+        float* res_grad_ptr = result->grad.data();
+
+        result->backward_operation = [res_grad_ptr, a, b, batch_size, features]()
         {
             for (int i = 0; i < batch_size; i++)
             {
                 for (int j = 0; j < features; j++)
                 {
-                    a->grad[i * features + j] += result->grad[i * features + j];
-                    b->grad[j] += result->grad[i * features + j];
+                    // Access using the raw pointer
+                    float grad_val = res_grad_ptr[i * features + j];
+                    a->grad[i * features + j] += grad_val;
+                    b->grad[j] += grad_val;
                 }
             }
         };
@@ -76,12 +85,16 @@ std::shared_ptr<Tensor> sub(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b]()
+        // Capture a raw pointer to result's grad vector to avoid a circular shared_ptr reference
+        float* res_grad_ptr = result->grad.data();
+        size_t data_size = result->data.size();
+
+        result->backward_operation = [res_grad_ptr, a, b, data_size]()
         {
-            for (size_t i = 0; i < result->data.size(); i++)
+            for (size_t i = 0; i < data_size; i++)
             {
-                a->grad[i] += result->grad[i];
-                b->grad[i] -= result->grad[i];
+                a->grad[i] += res_grad_ptr[i];
+                b->grad[i] -= res_grad_ptr[i];
             }
         };
 
@@ -106,14 +119,17 @@ std::shared_ptr<Tensor> sub(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b, batch_size, features]()
+        // Capture the raw pointer to the gradient data and the dimensions
+        float* res_grad_ptr = result->grad.data();
+
+        result->backward_operation = [res_grad_ptr, a, b, batch_size, features]()
         {
-            for (int i = 0; i < batch_size; i++)
-            {
-                for (int j = 0; j < features; j++)
-                {
-                    a->grad[i * features + j] += result->grad[i * features + j];
-                    b->grad[j] -= result->grad[i * features + j];
+            for (int i = 0; i < batch_size; i++) {
+                for (int j = 0; j < features; j++) {
+                    int idx = i * features + j;
+                    float grad_val = res_grad_ptr[idx];
+                    a->grad[idx] += grad_val;
+                    b->grad[j] -= grad_val; 
                 }
             }
         };
@@ -138,12 +154,16 @@ std::shared_ptr<Tensor> mult(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> 
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b]()
+        // Capture a raw pointer to result's grad vector to avoid a circular shared_ptr reference
+        float* res_grad_ptr = result->grad.data();
+        size_t data_size = result->data.size();
+
+        result->backward_operation = [res_grad_ptr, a, b, data_size]()
         {
-            for (size_t i = 0; i < result->data.size(); i++)
+            for (size_t i = 0; i < data_size; i++)
             {
-                a->grad[i] += result->grad[i] * b->data[i];
-                b->grad[i] += result->grad[i] * a->data[i];
+                a->grad[i] += res_grad_ptr[i] * b->data[i];
+                b->grad[i] += res_grad_ptr[i] * a->data[i];
             }
         };
 
@@ -168,15 +188,20 @@ std::shared_ptr<Tensor> mult(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> 
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b, batch_size, features]()
+        // Capture the raw pointer to the gradient data and the dimensions
+        float* res_grad_ptr = result->grad.data();
+
+        result->backward_operation = [res_grad_ptr, a, b, batch_size, features]()
         {
             for (int i = 0; i < batch_size; i++)
             {
                 for (int j = 0; j < features; j++)
                 {
+                    // Access using the raw pointer
                     int idx = i * features + j;
-                    a->grad[idx] += result->grad[idx] * b->data[j];
-                    b->grad[j] += result->grad[idx] * a->data[idx];
+                    float grad_val = res_grad_ptr[idx];
+                    a->grad[idx] += grad_val * b->data[j];
+                    b->grad[j] += grad_val * a->data[idx];
                 }
             }
         };
@@ -204,12 +229,16 @@ std::shared_ptr<Tensor> div(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b]()
+        // Capture a raw pointer to result's grad vector to avoid a circular shared_ptr reference
+        float* res_grad_ptr = result->grad.data();
+        size_t data_size = result->data.size();
+
+        result->backward_operation = [res_grad_ptr, a, b, data_size]()
         {
-            for (size_t i = 0; i < result->data.size(); i++)
+            for (size_t i = 0; i < data_size; i++)
             {
-                a->grad[i] += result->grad[i] / b->data[i];
-                b->grad[i] -= result->grad[i] * a->data[i] / (b->data[i] * b->data[i]);
+                a->grad[i] += res_grad_ptr[i] / b->data[i];
+                b->grad[i] -= res_grad_ptr[i] * a->data[i] / (b->data[i] * b->data[i]);
             }
         };
 
@@ -238,15 +267,20 @@ std::shared_ptr<Tensor> div(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b
         auto result = std::make_shared<Tensor>(std::move(result_data), a->shape);
         result->parents = {a, b};
 
-        result->backward_operation = [result, a, b, batch_size, features]()
+        // Capture the raw pointer to the gradient data and the dimensions
+        float* res_grad_ptr = result->grad.data();
+
+        result->backward_operation = [res_grad_ptr, a, b, batch_size, features]()
         {
             for (int i = 0; i < batch_size; i++)
             {
                 for (int j = 0; j < features; j++)
                 {
+                    // Access using the raw pointer
                     int idx = i * features + j;
-                    a->grad[idx] += result->grad[idx] / b->data[j];
-                    b->grad[j] -= result->grad[idx] * a->data[idx] / (b->data[j] * b->data[j]);
+                    float grad_val = res_grad_ptr[idx];
+                    a->grad[idx] += grad_val / b->data[j];
+                    b->grad[j] -= grad_val * a->data[idx] / (b->data[j] * b->data[j]);
                 }
             }
         };
@@ -289,27 +323,27 @@ std::shared_ptr<Tensor> matmul(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor
     auto result = std::make_shared<Tensor>(std::move(result_data), std::vector<int>{m, n});
     result->parents = {a, b}; // CRITICAL: Must reference the actual input tensors
 
-    result->backward_operation = [result, a, b, m, k, n]()
+    float* res_grad_ptr = result->grad.data();
+
+    result->backward_operation = [res_grad_ptr, a, b, m, k, n]()
     {
-        for (int i = 0; i < m; i++)
-        {
-            for (int p = 0; p < k; p++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    a->grad[i * k + p] += result->grad[i * n + j] * b->data[p * n + j];
+        for (int i = 0; i < m; i++) {
+            for (int p = 0; p < k; p++) {
+                float sum = 0.0f;
+                for (int j = 0; j < n; j++) {
+                    sum += res_grad_ptr[i * n + j] * b->data[p * n + j];
                 }
+                a->grad[i * k + p] += sum;
             }
         }
 
-        for (int p = 0; p < k; p++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                for (int i = 0; i < m; i++)
-                {
-                    b->grad[p * n + j] += a->data[i * k + p] * result->grad[i * n + j];
+        for (int p = 0; p < k; p++) {
+            for (int j = 0; j < n; j++) {
+                float sum = 0.0f;
+                for (int i = 0; i < m; i++) {
+                    sum += a->data[i * k + p] * res_grad_ptr[i * n + j];
                 }
+                b->grad[p * n + j] += sum;
             }
         }
     };
@@ -325,10 +359,12 @@ std::shared_ptr<Tensor> relu(std::shared_ptr<Tensor> a) {
 
     auto res = std::make_shared<Tensor>(std::move(res_data), a->shape);
     res->parents = {a};
-    res->backward_operation = [res, a]() {
+
+    auto res_grad_ptr = res->grad.data();
+    res->backward_operation = [res_grad_ptr, a]() {
         for (size_t i = 0; i < a->data.size(); ++i) {
             if (a->data[i] > 0) {
-                a->grad[i] += res->grad[i];
+                a->grad[i] += res_grad_ptr[i];
             }
             // else grad is 0, so we do nothing
         }
@@ -346,11 +382,17 @@ std::shared_ptr<Tensor> sigmoid(std::shared_ptr<Tensor> a)
 
     auto res = std::make_shared<Tensor>(std::move(res_data), a->shape);
     res->parents = {a};
-    res->backward_operation = [res, a]()
+
+    std::vector<float> sigmoid_output = res->data; 
+    float* res_grad_ptr = res->grad.data();
+
+    res->backward_operation = [sigmoid_output, res_grad_ptr, a]()
     {
         for (size_t i = 0; i < a->data.size(); ++i)
         {
-            a->grad[i] += res->grad[i] * res->data[i] * (1.0f - res->data[i]);
+            float s = sigmoid_output[i];
+            // Correct Chain Rule: upstream_grad * s * (1 - s)
+            a->grad[i] += res_grad_ptr[i] * s * (1.0f - s); 
         }
     };
     return res;
@@ -417,8 +459,18 @@ std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Te
     auto res = std::make_shared<Tensor>(std::move(res_data), std::vector<int>{B, OC, OH, OW});
     res->parents = {input, kernel, bias};
 
-    // --- BACKWARD PASS ---
-    res->backward_operation = [res, input, kernel, bias, stride, padding, B, C, H, W, OC, KH, KW, OH, OW]() {
+    float* res_grad_ptr = res->grad.data();
+
+    float* input_data_ptr = input->data.data();
+    float* input_grad_ptr = input->grad.data();
+    float* kernel_data_ptr = kernel->data.data();
+    float* kernel_grad_ptr = kernel->grad.data();
+    float* bias_grad_ptr = bias->grad.data();
+
+    res->backward_operation = [res_grad_ptr, input_data_ptr, input_grad_ptr, kernel_data_ptr, kernel_grad_ptr, bias_grad_ptr, 
+                            input, kernel, bias, // Capture parents to keep them alive
+                            stride, padding, B, C, H, W, OC, KH, KW, OH, OW]() {
+        
         for (int b = 0; b < B; ++b) {
             int input_batch_offset = b * C * H * W;
             int res_batch_offset = b * OC * OH * OW;
@@ -432,11 +484,11 @@ std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Te
                     int ih_base = oh * stride - padding;
 
                     for (int ow = 0; ow < OW; ++ow) {
-                        float upstream_grad = res->grad[res_row_offset + ow];
+                        float upstream_grad = res_grad_ptr[res_row_offset + ow];
                         int iw_base = ow * stride - padding;
 
-                        // Gradient w.r.t Bias
-                        bias->grad[oc] += upstream_grad;
+                        // 1. Gradient w.r.t Bias
+                        bias_grad_ptr[oc] += upstream_grad;
 
                         for (int ic = 0; ic < C; ++ic) {
                             int input_ic_offset = input_batch_offset + (ic * H * W);
@@ -455,8 +507,11 @@ std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Te
                                         int in_idx = input_h_offset + iw;
                                         int kn_idx = kernel_h_offset + kw;
 
-                                        kernel->grad[kn_idx] += input->data[in_idx] * upstream_grad;
-                                        input->grad[in_idx] += kernel->data[kn_idx] * upstream_grad;
+                                        // 2. Gradient w.r.t Kernel
+                                        kernel_grad_ptr[kn_idx] += input_data_ptr[in_idx] * upstream_grad;
+                                        
+                                        // 3. Gradient w.r.t Input
+                                        input_grad_ptr[in_idx] += kernel_data_ptr[kn_idx] * upstream_grad;
                                     }
                                 }
                             }
@@ -525,12 +580,17 @@ std::shared_ptr<Tensor> maxpool2d(std::shared_ptr<Tensor> a, int pool_size, int 
     auto res = std::make_shared<Tensor>(std::move(res_data), std::vector<int>{B, C, OH, OW});
     res->parents = {a};
 
-    // --- Backward Pass ---
-    // The gradient only flows to the specific 'max' pixels found in forward
-    res->backward_operation = [res, a, max_indices]() {
-        for (size_t i = 0; i < res->grad.size(); ++i) {
+    // Extract raw pointers
+    float* res_grad_ptr = res->grad.data();
+    float* a_grad_ptr = a->grad.data();
+    size_t res_size = res->grad.size();
+
+    // Capture a, max_indices (by value), and the raw pointers
+    res->backward_operation = [res_grad_ptr, a_grad_ptr, a, max_indices, res_size]() {
+        for (size_t i = 0; i < res_size; ++i) {
+            // The gradient only flows back to the specific pixel that was the maximum
             int original_idx = max_indices[i];
-            a->grad[original_idx] += res->grad[i];
+            a_grad_ptr[original_idx] += res_grad_ptr[i];
         }
     };
 
