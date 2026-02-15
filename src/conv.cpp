@@ -1,5 +1,4 @@
 #include "conv.hpp"
-#include "init.hpp"
 
 Conv2D::Conv2D(int in_channels, int out_channels, int kernel_size, int s, int p) : stride(s), padding(p) {
     std::vector<int> kernel_shape = {out_channels, in_channels, kernel_size, kernel_size};

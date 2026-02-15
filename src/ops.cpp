@@ -356,6 +356,27 @@ std::shared_ptr<Tensor> sigmoid(std::shared_ptr<Tensor> a)
     return res;
 }
 
+std::shared_ptr<Tensor> softmax(std::shared_ptr<Tensor> a) {
+    std::vector<float> res_data(a->data.size());
+    float max_val = *std::max_element(a->data.begin(), a->data.end());
+    float sum = 0;
+    for (size_t i = 0; i < a->data.size(); ++i) {
+        res_data[i] = exp(a->data[i] - max_val);
+        sum += res_data[i];
+    }
+    for (size_t i = 0; i < a->data.size(); ++i) {
+        res_data[i] /= sum;
+    }
+    auto res = std::make_shared<Tensor>(std::move(res_data), a->shape);
+    res->parents = {a};
+    res->backward_operation = [res, a]() {
+        for (size_t i = 0; i < a->data.size(); ++i) {
+            a->grad[i] += res->grad[i] * res->data[i] * (1.0f - res->data[i]);
+        }
+    };
+    return res;
+}
+
 std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Tensor> kernel, std::shared_ptr<Tensor> bias, int stride, int padding) {
     int B  = input->shape[0];
     int C  = input->shape[1]; // In_Channels

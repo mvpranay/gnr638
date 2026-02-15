@@ -67,6 +67,14 @@ PYBIND11_MODULE(APDNN, m) {
         return relu(a); 
     }, "ReLU activation");
 
+    m.def("sigmoid", [](std::shared_ptr<Tensor> a) { 
+        return sigmoid(a); 
+    }, "Sigmoid activation");
+
+    m.def("softmax", [](std::shared_ptr<Tensor> a) { 
+        return softmax(a); 
+    }, "Softmax activation");
+
     // Linear layer - return_value_policy ensures proper reference
     py::class_<Linear>(m, "Linear")
         .def(py::init<int, int>())

@@ -3,6 +3,7 @@
 
 #include "tensor.hpp"
 #include "ops.hpp"
+#include "init.hpp"
 #include <vector>
 #include <memory>
 
