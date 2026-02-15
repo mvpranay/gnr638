@@ -1,15 +1,21 @@
-import os
 import time
 from pathlib import Path
 from typing import List, Tuple, Optional
-import numpy as np
-from PIL import Image
+import cv2
 import APDNN
+import random
+
 
 class Data_Loader:
     """Custom Dataset for loading images and converting to framework tensors."""
-    
-    def __init__(self, data_dir: str, img_size: int = 32, transform=None, print_time: bool = False):
+
+    def __init__(
+        self,
+        data_dir: str,
+        img_size: int = 32,
+        transform=None,
+        print_time: bool = False,
+    ):
         """
         Args:
             data_dir: Path to dataset folder with class subdirectories
@@ -23,72 +29,88 @@ class Data_Loader:
         self.labels = []
         self.label_to_idx = {}
         self.print_time = print_time
-        
+
         self.load_time = 0.0
         self._load_data()
-    
+
     def _load_data(self):
         """Load image paths and labels from directory structure."""
         start_time = time.time()
-        
+
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Directory {self.data_dir} does not exist")
-        
+
         # Get class labels from subdirectories
         class_dirs = sorted([d for d in self.data_dir.iterdir() if d.is_dir()])
-        
+
         if len(class_dirs) == 0:
             raise ValueError(f"No class subdirectories found in {self.data_dir}")
-        
+
         for idx, class_dir in enumerate(class_dirs):
             label = class_dir.name
             self.label_to_idx[label] = idx
-            
+
             img_count = 0
             for img_file in sorted(class_dir.glob("*.png")):
                 self.images.append(str(img_file))
                 self.labels.append(label)
                 img_count += 1
-            
+
             print(f"  Class '{label}': {img_count} images")
-        
+
         self.load_time = time.time() - start_time
         if self.print_time:
             print(f"\nDataset loading time: {self.load_time:.4f} seconds")
         print(f"Total images: {len(self.images)}")
         print(f"Classes: {list(self.label_to_idx.keys())}\n")
-    
+
     def __len__(self) -> int:
         return len(self.images)
-    
-    def __getitem__(self, idx: int) -> Tuple[np.ndarray, int]:
+
+    def __getitem__(self, idx: int) -> Tuple[list, int]:
         """
-        Return image as numpy array and label as integer.
-        
+        Return image as list and label as integer.
+
         Returns:
             (image_array, label_idx) where image_array is 32x32x3 normalized to [0,1]
         """
         img_path = self.images[idx]
         label = self.labels[idx]
         label_idx = self.label_to_idx[label]
-        
-        # Load and resize image
-        image = Image.open(img_path).convert("RGB")
-        image = image.resize((self.img_size, self.img_size), Image.BILINEAR)
-        
-        # Convert to numpy array and normalize to [0, 1]
-        img_array = np.array(image, dtype=np.float32) / 255.0
+
+        # Load and resize image using OpenCV
+        image = cv2.imread(img_path)
+        # Convert BGR to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Resize image
+        image = cv2.resize(
+            image, (self.img_size, self.img_size), interpolation=cv2.INTER_LINEAR
+        )
+
+        # Convert to list and normalize to [0, 1]
+        # OpenCV returns numpy array, convert to nested list [H, W, C]
+        img_array_3d = []
+        for h in range(self.img_size):
+            row = []
+            for w in range(self.img_size):
+                pixel = [float(image[h, w, c]) / 255.0 for c in range(3)]
+                row.append(pixel)
+            img_array_3d.append(row)
         
         # Apply transform if provided
         if self.transform:
-            img_array = self.transform(img_array)
-        
-        return img_array, label_idx
-    
-    def to_tensor(self, img_array: np.ndarray) -> APDNN.Tensor:
-        """Convert numpy array to framework Tensor (flattened for now)."""
+            img_array_3d = self.transform(img_array_3d)
+
+        return img_array_3d, label_idx
+
+    def to_tensor(self, img_array: list) -> APDNN.Tensor:
+        """Convert list array to framework Tensor (flattened for now)."""
         # Flatten: 32x32x3 -> 3072
-        flat_data = img_array.flatten().tolist()
+        flat_data = []
+        for row in img_array:
+            for pixel in row:
+                for channel_val in pixel:
+                    flat_data.append(channel_val)
         return APDNN.Tensor(flat_data, [1, len(flat_data)])
     
     def get_batch(self, indices: List[int]) -> Tuple[List, List[int]]:
@@ -148,7 +170,7 @@ def get_data_loader(
         # Split indices
         indices = list(range(len(dataset)))
         if shuffle:
-            np.random.shuffle(indices)
+            random.shuffle(indices)
         
         train_indices = indices[:train_size]
         test_indices = indices[train_size:]
