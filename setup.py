@@ -10,6 +10,7 @@ ext_modules = [
          "src/linear.cpp",
          "src/init.cpp",
          "src/optimizer.cpp",
+         "src/conv.cpp",
          "src/loss.cpp"],
         include_dirs=["include"],
         cxx_std=17,

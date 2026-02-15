@@ -27,6 +27,9 @@ public:
 	std::shared_ptr<Tensor> operator-=(std::shared_ptr<Tensor> other);
 	std::shared_ptr<Tensor> operator*=(std::shared_ptr<Tensor> other);
 	std::shared_ptr<Tensor> operator/=(std::shared_ptr<Tensor> other);
+
+	std::shared_ptr<Tensor> flatten();
+	std::shared_ptr<Tensor> view(std::vector<int> new_shape);
 };
 
 

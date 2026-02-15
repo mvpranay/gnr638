@@ -3,6 +3,7 @@
 
 #include "tensor.hpp"
 #include <memory>
+#include <math.h>
 
 std::shared_ptr<Tensor> mse_loss(std::shared_ptr<Tensor> pred, std::shared_ptr<Tensor> target);
 

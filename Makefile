@@ -37,4 +37,10 @@ $(OBJDIR)/loss.o: $(SRCDIR)/loss.cpp $(INCDIR)/loss.hpp $(INCDIR)/tensor.hpp
 clean:
 	rm -rf $(OBJDIR) $(TARGET)
 
-.PHONY: all clean
+build:
+	python3 setup.py build_ext --inplace
+
+rmbuild:
+	rm -rf build APDNN.cpython-312-x86_64-linux-gnu.so
+
+.PHONY: all clean rmbuild build

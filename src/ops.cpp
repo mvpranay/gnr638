@@ -355,3 +355,117 @@ std::shared_ptr<Tensor> sigmoid(std::shared_ptr<Tensor> a)
     };
     return res;
 }
+
+std::shared_ptr<Tensor> conv2d(std::shared_ptr<Tensor> input, std::shared_ptr<Tensor> kernel, std::shared_ptr<Tensor> bias, int stride, int padding) {
+    int B  = input->shape[0];
+    int C  = input->shape[1]; // In_Channels
+    int H  = input->shape[2];
+    int W  = input->shape[3];
+    
+    int OC = kernel->shape[0]; // Out_Channels
+    int KH = kernel->shape[2];
+    int KW = kernel->shape[3];
+
+    int OH = (H + 2 * padding - KH) / stride + 1;
+    int OW = (W + 2 * padding - KW) / stride + 1;
+
+    std::vector<float> res_data(B * OC * OH * OW, 0.0f);
+
+    // --- FORWARD PASS ---
+    for (int b = 0; b < B; ++b) {
+        int input_batch_offset = b * C * H * W;
+        int res_batch_offset = b * OC * OH * OW;
+
+        for (int oc = 0; oc < OC; ++oc) {
+            int res_channel_offset = res_batch_offset + (oc * OH * OW);
+            int kernel_oc_offset = oc * C * KH * KW;
+            float b_val = bias->data[oc];
+
+            for (int oh = 0; oh < OH; ++oh) {
+                int res_row_offset = res_channel_offset + (oh * OW);
+                int ih_base = oh * stride - padding;
+
+                for (int ow = 0; ow < OW; ++ow) {
+                    int iw_base = ow * stride - padding;
+                    float sum = 0.0f;
+
+                    for (int ic = 0; ic < C; ++ic) {
+                        int input_ic_offset = input_batch_offset + (ic * H * W);
+                        int kernel_ic_offset = kernel_oc_offset + (ic * KH * KW);
+
+                        for (int kh = 0; kh < KH; ++kh) {
+                            int ih = ih_base + kh;
+                            if (ih < 0 || ih >= H) continue;
+
+                            int input_h_offset = input_ic_offset + (ih * W);
+                            int kernel_h_offset = kernel_ic_offset + (kh * KW);
+
+                            for (int kw = 0; kw < KW; ++kw) {
+                                int iw = iw_base + kw;
+                                if (iw >= 0 && iw < W) {
+                                    sum += input->data[input_h_offset + iw] * kernel->data[kernel_h_offset + kw];
+                                }
+                            }
+                        }
+                    }
+                    res_data[res_row_offset + ow] = sum + b_val;
+                }
+            }
+        }
+    }
+
+    auto res = std::make_shared<Tensor>(std::move(res_data), std::vector<int>{B, OC, OH, OW});
+    res->parents = {input, kernel, bias};
+
+    // --- BACKWARD PASS ---
+    res->backward_operation = [res, input, kernel, bias, stride, padding, B, C, H, W, OC, KH, KW, OH, OW]() {
+        for (int b = 0; b < B; ++b) {
+            int input_batch_offset = b * C * H * W;
+            int res_batch_offset = b * OC * OH * OW;
+
+            for (int oc = 0; oc < OC; ++oc) {
+                int res_channel_offset = res_batch_offset + (oc * OH * OW);
+                int kernel_oc_offset = oc * C * KH * KW;
+
+                for (int oh = 0; oh < OH; ++oh) {
+                    int res_row_offset = res_channel_offset + (oh * OW);
+                    int ih_base = oh * stride - padding;
+
+                    for (int ow = 0; ow < OW; ++ow) {
+                        float upstream_grad = res->grad[res_row_offset + ow];
+                        int iw_base = ow * stride - padding;
+
+                        // Gradient w.r.t Bias
+                        bias->grad[oc] += upstream_grad;
+
+                        for (int ic = 0; ic < C; ++ic) {
+                            int input_ic_offset = input_batch_offset + (ic * H * W);
+                            int kernel_ic_offset = kernel_oc_offset + (ic * KH * KW);
+
+                            for (int kh = 0; kh < KH; ++kh) {
+                                int ih = ih_base + kh;
+                                if (ih < 0 || ih >= H) continue;
+
+                                int input_h_offset = input_ic_offset + (ih * W);
+                                int kernel_h_offset = kernel_ic_offset + (kh * KW);
+
+                                for (int kw = 0; kw < KW; ++kw) {
+                                    int iw = iw_base + kw;
+                                    if (iw >= 0 && iw < W) {
+                                        int in_idx = input_h_offset + iw;
+                                        int kn_idx = kernel_h_offset + kw;
+
+                                        kernel->grad[kn_idx] += input->data[in_idx] * upstream_grad;
+                                        input->grad[in_idx] += kernel->data[kn_idx] * upstream_grad;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    return res;
+}

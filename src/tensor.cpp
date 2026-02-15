@@ -41,6 +41,31 @@ void Tensor::backward() {
 	}		
 }
 
+std::shared_ptr<Tensor> Tensor::flatten() {
+    // flattens everything except the batch dimension (index 0)
+    int batch_size = this->shape[0];
+    int flat_features = (int)this->data.size() / batch_size;
+    return this->view({batch_size, flat_features});
+}
+
+std::shared_ptr<Tensor> Tensor::view(std::vector<int> new_shape) {
+    // verify number of elements remaining the same
+    int new_size = 1;
+    for (int s : new_shape) new_size *= s;
+    if (new_size != (int)this->data.size()) {
+        throw std::runtime_error("view : size mismatch");
+    }
+
+    auto res = std::make_shared<Tensor>(this->data, new_shape);
+    
+    res->parents = { shared_from_this() };
+    res->backward_operation = [res, self = shared_from_this()]() {
+        for (size_t i = 0; i < self->grad.size(); i++) {
+            self->grad[i] += res->grad[i];
+        }
+    };
+    return res;
+}
 
 // Non-member operator overload
 std::shared_ptr<Tensor> operator+(std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) {

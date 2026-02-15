@@ -7,6 +7,7 @@
 #include "loss.hpp"
 #include "ops.hpp"
 #include "init.hpp"
+#include "conv.hpp"
 
 namespace py = pybind11;
 
@@ -37,7 +38,9 @@ PYBIND11_MODULE(APDNN, m) {
         .def("__sub__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return sub(a, b); })
         .def("__mul__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return mult(a, b); })
         .def("__truediv__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return div(a, b); })
-        .def("__matmul__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return matmul(a, b); });
+        .def("__matmul__", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { return matmul(a, b); })
+        .def("view", &Tensor::view)
+        .def("flatten", &Tensor::view);
 
     // Tensor operators - use lambdas to avoid ambiguity
     m.def("add", [](std::shared_ptr<Tensor> a, std::shared_ptr<Tensor> b) { 
@@ -69,8 +72,23 @@ PYBIND11_MODULE(APDNN, m) {
         .def(py::init<int, int>())
         .def("forward", &Linear::forward)
         .def("parameters", &Linear::parameters)
-        .def_readonly("weights", &Linear::weights)  // Changed to readonly
-        .def_readonly("bias", &Linear::bias);        // Changed to readonly
+        .def_readwrite("weights", &Linear::weights)  
+        .def_readwrite("bias", &Linear::bias);        
+
+    // Conv2D layer
+    py::class_<Conv2D>(m, "Conv2D")
+        .def(py::init<int, int, int, int, int>(), 
+             py::arg("in_channels"), 
+             py::arg("out_channels"), 
+             py::arg("kernel_size"), 
+             py::arg("stride") = 1, 
+             py::arg("padding") = 0)
+        .def("forward", &Conv2D::forward)
+        .def("parameters", &Conv2D::parameters)
+        .def_readwrite("weights", &Conv2D::weights)
+        .def_readwrite("bias", &Conv2D::bias)
+        .def_readwrite("stride", &Conv2D::stride)
+        .def_readwrite("padding", &Conv2D::padding);
 
     // Optimizer
     py::class_<SGD>(m, "SGD")
