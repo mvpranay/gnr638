@@ -29,9 +29,10 @@ conv1 = APDNN.Conv2D(1, 8, 3, stride=1, padding=1)  # 1x32x32 -> 8x32x32
 fc1 = APDNN.Linear(8 * 16 * 16, 10)  # 10 classes (0-9)
 
 params = conv1.parameters() + fc1.parameters()
-optimizer = APDNN.SGD(params, 0.001)
+num_params = conv1.param_count() + fc1.param_count()
+optimizer = APDNN.SGD(params, 0.01)
 
-print(f"Model built with {len(params)} parameter tensors\n")
+print(f"Model built with {num_params} parameters\n")
 
 # Training loop
 num_epochs = 10

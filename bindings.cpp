@@ -81,7 +81,8 @@ PYBIND11_MODULE(APDNN, m) {
         .def("forward", &Linear::forward)
         .def("parameters", &Linear::parameters)
         .def_readwrite("weights", &Linear::weights)  
-        .def_readwrite("bias", &Linear::bias);        
+        .def_readwrite("bias", &Linear::bias)
+        .def("param_count", &Linear::param_count);
 
     // Conv2D layer
     py::class_<Conv2D>(m, "Conv2D")
@@ -96,7 +97,8 @@ PYBIND11_MODULE(APDNN, m) {
         .def_readwrite("weights", &Conv2D::weights)
         .def_readwrite("bias", &Conv2D::bias)
         .def_readwrite("stride", &Conv2D::stride)
-        .def_readwrite("padding", &Conv2D::padding);
+        .def_readwrite("padding", &Conv2D::padding)
+        .def("param_count", &Conv2D::param_count);
 
     // Max pooling
     m.def("maxpool2d", &maxpool2d, py::arg("a"), py::arg("pool_size") = 2, py::arg("stride") = 2);

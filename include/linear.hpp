@@ -14,6 +14,10 @@ public:
     Linear(int in_features, int out_features);
     std::shared_ptr<Tensor> forward(std::shared_ptr<Tensor> input);
     std::vector<std::shared_ptr<Tensor>> parameters();
+
+    int param_count() {
+        return weights->data.size() + bias->data.size();
+    }
 };
 
 #endif
