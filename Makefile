@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Wextra -Iinclude -fopenmp -mavx2
 SRCDIR = src
 OBJDIR = obj
 INCDIR = include

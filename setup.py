@@ -4,16 +4,20 @@ from setuptools import setup
 ext_modules = [
     Pybind11Extension(
         "APDNN",
-        ["bindings.cpp", 
-         "src/tensor.cpp", 
-         "src/ops.cpp",
-         "src/linear.cpp",
-         "src/init.cpp",
-         "src/optimizer.cpp",
-         "src/conv.cpp",
-         "src/loss.cpp"],
+        [
+            "bindings.cpp",
+            "src/tensor.cpp",
+            "src/ops.cpp",
+            "src/linear.cpp",
+            "src/init.cpp",
+            "src/optimizer.cpp",
+            "src/conv.cpp",
+            "src/loss.cpp",
+        ],
         include_dirs=["include"],
         cxx_std=17,
+        extra_compile_args=["-fopenmp", "-mavx2"],
+        extra_link_args=["-fopenmp"],
     ),
 ]
 
