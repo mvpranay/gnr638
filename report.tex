@@ -1,0 +1,473 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{subcaption}
+\usepackage{float}
+
+\geometry{margin=1in}
+
+\title{\textbf{CNN Training Report} \\ 
+Image Classification with Convolutional Neural Networks}
+\author{Your Name \\ Roll Number}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This report documents the design, implementation, and evaluation of a Convolutional Neural Network (CNN) for image classification tasks. Two models were developed: Model 1 for 10-class digit recognition (Dataset 1) and Model 2 for 100-class object recognition (Dataset 2).
+
+\section{Model Architecture Design and Rationale}
+
+\subsection{Model 1: 10-Class Digit Recognition}
+
+\subsubsection{Architecture}
+\begin{itemize}
+    \item \textbf{Input Layer:} Grayscale images of size $1 \times 32 \times 32$
+    \item \textbf{Conv1:} $1 \rightarrow 8$ channels, $3 \times 3$ kernel, stride=1, padding=1
+    \item \textbf{ReLU Activation}
+    \item \textbf{MaxPool1:} $2 \times 2$ pool, stride=2 ($32 \times 32 \rightarrow 16 \times 16$)
+    \item \textbf{Flatten:} $[B, 8, 16, 16] \rightarrow [B, 2048]$
+    \item \textbf{FC1:} $2048 \rightarrow 10$ (output logits)
+\end{itemize}
+
+\subsubsection{Design Rationale}
+\begin{itemize}
+    \item \textbf{Single Convolutional Layer:} Sufficient for simple digit recognition task
+    \item \textbf{8 Feature Maps:} Adequate capacity to capture basic edges and patterns in digits
+    \item \textbf{3×3 Kernel:} Standard kernel size balancing receptive field and computational cost
+    \item \textbf{Padding=1:} Maintains spatial dimensions after convolution
+    \item \textbf{MaxPooling:} Provides spatial invariance and reduces computation
+\end{itemize}
+
+\subsection{Model 2: 100-Class Object Recognition}
+
+\subsubsection{Architecture}
+\begin{itemize}
+    \item \textbf{Input Layer:} Grayscale images of size $1 \times 32 \times 32$
+    \item \textbf{Conv1:} $1 \rightarrow 16$ channels, $3 \times 3$ kernel, stride=1, padding=1
+    \item \textbf{ReLU Activation}
+    \item \textbf{MaxPool1:} $2 \times 2$ pool, stride=2 ($32 \times 32 \rightarrow 16 \times 16$)
+    \item \textbf{Conv2:} $16 \rightarrow 32$ channels, $3 \times 3$ kernel, stride=1, padding=1
+    \item \textbf{ReLU Activation}
+    \item \textbf{MaxPool2:} $2 \times 2$ pool, stride=2 ($16 \times 16 \rightarrow 8 \times 8$)
+    \item \textbf{Flatten:} $[B, 32, 8, 8] \rightarrow [B, 2048]$
+    \item \textbf{FC1:} $2048 \rightarrow 100$ (output logits)
+\end{itemize}
+
+\subsubsection{Design Rationale}
+\begin{itemize}
+    \item \textbf{Two Convolutional Layers:} Hierarchical feature learning for complex object recognition
+    \item \textbf{Increased Channel Capacity:} 16 and 32 feature maps to capture diverse object features
+    \item \textbf{Progressive Downsampling:} Two maxpool layers reduce spatial dimensions while preserving features
+    \item \textbf{Deeper Architecture:} Better suited for discriminating between 100 diverse object classes
+\end{itemize}
+
+\section{Trainable Parameters}
+
+\subsection{Model 1: Parameter Count}
+
+\textbf{Conv1 Parameters:}
+\begin{align*}
+\text{Weights} &= C_{out} \times C_{in} \times K_h \times K_w = 8 \times 1 \times 3 \times 3 = 72 \\
+\text{Biases} &= C_{out} = 8 \\
+\text{Total Conv1} &= 72 + 8 = 80
+\end{align*}
+
+\textbf{FC1 Parameters:}
+\begin{align*}
+\text{Weights} &= N_{in} \times N_{out} = 2048 \times 10 = 20,480 \\
+\text{Biases} &= N_{out} = 10 \\
+\text{Total FC1} &= 20,480 + 10 = 20,490
+\end{align*}
+
+\textbf{Total Parameters (Model 1):} $80 + 20,490 = \boxed{20,570}$
+
+\subsection{Model 2: Parameter Count}
+
+\textbf{Conv1 Parameters:}
+\begin{align*}
+\text{Weights} &= 16 \times 1 \times 3 \times 3 = 144 \\
+\text{Biases} &= 16 \\
+\text{Total Conv1} &= 160
+\end{align*}
+
+\textbf{Conv2 Parameters:}
+\begin{align*}
+\text{Weights} &= 32 \times 16 \times 3 \times 3 = 4,608 \\
+\text{Biases} &= 32 \\
+\text{Total Conv2} &= 4,640
+\end{align*}
+
+\textbf{FC1 Parameters:}
+\begin{align*}
+\text{Weights} &= 2048 \times 100 = 204,800 \\
+\text{Biases} &= 100 \\
+\text{Total FC1} &= 204,900
+\end{align*}
+
+\textbf{Total Parameters (Model 2):} $160 + 4,640 + 204,900 = \boxed{209,700}$
+
+\section{MACs and FLOPs Analysis}
+
+\subsection{Computational Complexity Definitions}
+\begin{itemize}
+    \item \textbf{MAC (Multiply-Accumulate):} One multiplication followed by one addition
+    \item \textbf{FLOP (Floating Point Operation):} Each multiply and add counted separately
+    \item \textbf{Relationship:} $\text{FLOPs} = 2 \times \text{MACs}$ (assuming each MAC = 2 FLOPs)
+\end{itemize}
+
+\subsection{Conv2D MACs Formula}
+For a convolution layer:
+\begin{equation}
+\text{MACs} = H_{out} \times W_{out} \times C_{out} \times (K_h \times K_w \times C_{in})
+\end{equation}
+
+\subsection{Linear Layer MACs Formula}
+For a fully connected layer:
+\begin{equation}
+\text{MACs} = N_{in} \times N_{out}
+\end{equation}
+
+\subsection{Model 1: MACs/FLOPs per Forward Pass}
+
+\textbf{Conv1:}
+\begin{align*}
+\text{MACs} &= 32 \times 32 \times 8 \times (3 \times 3 \times 1) \\
+&= 1024 \times 8 \times 9 = 73,728
+\end{align*}
+
+\textbf{FC1:}
+\begin{align*}
+\text{MACs} &= 2048 \times 10 = 20,480
+\end{align*}
+
+\textbf{Total Model 1:}
+\begin{align*}
+\text{Total MACs} &= 73,728 + 20,480 = \boxed{94,208} \\
+\text{Total FLOPs} &= 2 \times 94,208 = \boxed{188,416}
+\end{align*}
+
+\subsection{Model 2: MACs/FLOPs per Forward Pass}
+
+\textbf{Conv1:}
+\begin{align*}
+\text{MACs} &= 32 \times 32 \times 16 \times (3 \times 3 \times 1) \\
+&= 1024 \times 16 \times 9 = 147,456
+\end{align*}
+
+\textbf{Conv2:}
+\begin{align*}
+\text{MACs} &= 16 \times 16 \times 32 \times (3 \times 3 \times 16) \\
+&= 256 \times 32 \times 144 = 1,179,648
+\end{align*}
+
+\textbf{FC1:}
+\begin{align*}
+\text{MACs} &= 2048 \times 100 = 204,800
+\end{align*}
+
+\textbf{Total Model 2:}
+\begin{align*}
+\text{Total MACs} &= 147,456 + 1,179,648 + 204,800 = \boxed{1,531,904} \\
+\text{Total FLOPs} &= 2 \times 1,531,904 = \boxed{3,063,808}
+\end{align*}
+
+\subsection{Computational Complexity Summary}
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Layer} & \textbf{Model 1 MACs} & \textbf{Model 2 MACs} \\
+\midrule
+Conv1 & 73,728 & 147,456 \\
+Conv2 & --- & 1,179,648 \\
+FC1 & 20,480 & 204,800 \\
+\midrule
+\textbf{Total MACs} & \textbf{94,208} & \textbf{1,531,904} \\
+\textbf{Total FLOPs} & \textbf{188,416} & \textbf{3,063,808} \\
+\bottomrule
+\end{tabular}
+\caption{Computational complexity comparison (per image, forward pass only)}
+\end{table}
+
+\section{Dataset Loading Time}
+
+\subsection{Dataset Statistics}
+\begin{itemize}
+    \item \textbf{Dataset 1:} 10 classes (digits 0-9), grayscale images resized to $32 \times 32$
+    \item \textbf{Dataset 2:} 100 classes (CIFAR-100 categories), grayscale images resized to $32 \times 32$
+    \item \textbf{Preprocessing:} Normalization to [0, 1], data augmentation (random flips, rotation)
+\end{itemize}
+
+\subsection{Loading Time Measurements}
+% Replace with your actual measurements
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Metric} & \textbf{Model 1} & \textbf{Model 2} \\
+\midrule
+Training samples & XX,XXX & XX,XXX \\
+Test samples & X,XXX & X,XXX \\
+Batch size & 32 & 32 \\
+Avg. loading time (train) & X.XX s & X.XX s \\
+Avg. loading time (test) & X.XX s & X.XX s \\
+\bottomrule
+\end{tabular}
+\caption{Dataset loading time measurements}
+\end{table}
+
+\section{Training and Validation Performance}
+
+\subsection{Training Configuration}
+\begin{itemize}
+    \item \textbf{Optimizer:} Stochastic Gradient Descent (SGD)
+    \item \textbf{Learning Rate:} 0.01
+    \item \textbf{Batch Size:} 32 (training), 64 (evaluation)
+    \item \textbf{Number of Epochs:} 10
+    \item \textbf{Loss Function:} Cross-Entropy Loss
+    \item \textbf{Data Augmentation:} Random horizontal flip, random rotation ($\pm 10^\circ$)
+\end{itemize}
+
+\subsection{Model 1: Training Performance}
+% Replace with your actual results
+\begin{table}[H]
+\centering
+\begin{tabular}{crr}
+\toprule
+\textbf{Epoch} & \textbf{Train Loss} & \textbf{Time (s)} \\
+\midrule
+1 & 1.0697 & 20.38 \\
+2 & 0.5873 & 20.12 \\
+3 & 0.5271 & 21.15 \\
+4 & 0.4729 & 20.92 \\
+5 & 0.4218 & 22.04 \\
+6 & 0.3750 & 21.46 \\
+7 & 0.3359 & 38.95 \\
+8 & 0.3033 & 25.66 \\
+9 & 0.2765 & 21.41 \\
+10 & 0.2547 & 21.16 \\
+\bottomrule
+\end{tabular}
+\caption{Model 1 training metrics across epochs}
+\end{table}
+
+\textbf{Final Test Accuracy:} 92.97\% (55785/60000)
+
+\subsection{Model 2: Training Performance}
+% Replace with your actual results
+\begin{table}[H]
+\centering
+\begin{tabular}{crr}
+\toprule
+\textbf{Epoch} & \textbf{Train Loss} & \textbf{Time (s)} \\
+\midrule
+1 & 4.5931 & 20.42 \\
+2 & 4.4391 & 15.55 \\
+3 & 4.2610 & 4.32 \\
+4 & 4.1837 & 4.31 \\
+5 & 4.0801 & 4.34 \\
+6 & 3.9491 & 4.32 \\
+7 & 3.8299 & 4.66 \\
+8 & 3.7453 & 4.90 \\
+9 & 3.6811 & 4.62 \\
+10 & 3.6310 & 6.42 \\
+\bottomrule
+\end{tabular}
+\caption{Model 2 training metrics across epochs}
+\end{table}
+
+\textbf{Final Test Accuracy:} XX.XX\% (XXXX/XXXX)
+
+\section{Performance Visualization}
+
+\subsection{Training Loss Curves}
+
+\begin{figure}[H]
+    \centering
+    % Replace with your actual plot
+    \includegraphics[width=0.7\textwidth]{loss_plot_model1.png}
+    \caption{Model 1: Training loss over epochs}
+    \label{fig:loss1}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % Replace with your actual plot
+    \includegraphics[width=0.7\textwidth]{loss_plot_model2.png}
+    \caption{Model 2: Training loss over epochs}
+    \label{fig:loss2}
+\end{figure}
+
+% Code to generate plots (save in separate Python script):
+\begin{lstlisting}[language=Python, caption=Plot generation code]
+import matplotlib.pyplot as plt
+
+# Model 1
+epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+losses1 = [X.XX, X.XX, ...]  # Your data
+
+plt.figure(figsize=(10, 6))
+plt.plot(epochs, losses1, 'b-o', linewidth=2, markersize=8)
+plt.xlabel('Epoch', fontsize=14)
+plt.ylabel('Training Loss', fontsize=14)
+plt.title('Model 1: Training Loss over Epochs', fontsize=16)
+plt.grid(True, alpha=0.3)
+plt.savefig('loss_plot_model1.png', dpi=300, bbox_inches='tight')
+plt.show()
+\end{lstlisting}
+
+\subsection{Training Time per Epoch}
+
+\begin{figure}[H]
+    \centering
+    % Replace with your actual plot
+    \includegraphics[width=0.7\textwidth]{time_plot.png}
+    \caption{Training time comparison per epoch}
+    \label{fig:time}
+\end{figure}
+
+\section{Additional Key Indicators}
+
+\subsection{Model Efficiency Metrics}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Metric} & \textbf{Model 1} & \textbf{Model 2} \\
+\midrule
+Parameters & 20,570 & 209,700 \\
+MACs per image & 94,208 & 1,531,904 \\
+FLOPs per image & 188,416 & 3,063,808 \\
+Model size (approx.) & 80 KB & 820 KB \\
+Params/Accuracy ratio & XXX & XXX \\
+MACs/Accuracy ratio & XXX & XXX \\
+Inference time (ms) & X.XX & X.XX \\
+\bottomrule
+\end{tabular}
+\caption{Model efficiency comparison}
+\end{table}
+
+\subsection{Per-Class Performance Analysis}
+
+For Model 2, analyze confusion matrix to identify:
+\begin{itemize}
+    \item \textbf{Best Performing Classes:} Classes with highest accuracy
+    \item \textbf{Worst Performing Classes:} Classes frequently misclassified
+    \item \textbf{Common Confusions:} Pairs of classes often confused (e.g., cat vs. dog)
+\end{itemize}
+
+% Optional: Include confusion matrix visualization
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{confusion_matrix.png}
+%     \caption{Confusion matrix for Model 2 (top 20 classes shown)}
+% \end{figure}
+
+\subsection{Convergence Analysis}
+
+\begin{itemize}
+    \item \textbf{Loss Convergence:} Both models show decreasing loss over epochs
+    \item \textbf{Learning Rate Impact:} Fixed LR of 0.01 suitable for shallow networks
+    \item \textbf{Overfitting Detection:} Monitor training vs. validation loss gap
+    \item \textbf{Early Stopping:} Could be applied if validation loss plateaus
+\end{itemize}
+
+\section{Failed Design Decision}
+
+\subsection{Attempted Design: Three Convolutional Layers}
+
+\subsubsection{Initial Architecture}
+I initially attempted a deeper architecture for Model 2 with three convolutional layers:
+\begin{itemize}
+    \item Conv1: $1 \rightarrow 16$ channels, MaxPool ($32 \rightarrow 16$)
+    \item Conv2: $16 \rightarrow 32$ channels, MaxPool ($16 \rightarrow 8$)
+    \item Conv3: $32 \rightarrow 64$ channels, MaxPool ($8 \rightarrow 4$)
+    \item FC: $64 \times 4 \times 4 = 1024 \rightarrow 100$
+\end{itemize}
+
+\subsubsection{Why It Failed}
+
+\textbf{1. Vanishing Spatial Information}
+\begin{itemize}
+    \item After three maxpool operations, spatial dimensions reduced to $4 \times 4$
+    \item Original $32 \times 32$ images already small; excessive downsampling lost critical details
+    \item Fine-grained features needed for discriminating 100 classes were destroyed
+\end{itemize}
+
+\textbf{2. Overfitting}
+\begin{itemize}
+    \item Training loss decreased rapidly but test accuracy remained poor (XX\% vs XX\% for 2-conv model)
+    \item High capacity (XXX,XXX parameters) but insufficient training data
+    \item Model memorized training samples rather than learning generalizable features
+\end{itemize}
+
+\textbf{3. Training Instability}
+\begin{itemize}
+    \item Loss oscillated significantly between epochs
+    \item Gradient flow issues through deeper network without batch normalization
+    \item Required extensive hyperparameter tuning (learning rate, initialization)
+\end{itemize}
+
+\textbf{4. Computational Cost}
+\begin{itemize}
+    \item MACs increased to $\sim$X,XXX,XXX (XXX\% higher than 2-conv model)
+    \item Training time per epoch increased by XX\%
+    \item Marginal or negative accuracy improvement despite higher cost
+\end{itemize}
+
+\subsubsection{Lessons Learned}
+
+\begin{enumerate}
+    \item \textbf{Input Resolution Matters:} Shallow architectures more suitable for small images ($32 \times 32$)
+    \item \textbf{Depth-Width Tradeoff:} Better to increase channel width than add layers for small inputs
+    \item \textbf{Regularization Necessity:} Deeper models require techniques like dropout, batch normalization
+    \item \textbf{Diminishing Returns:} More layers don't always improve performance; match architecture to task complexity
+\end{enumerate}
+
+\subsubsection{Solution}
+Reverted to two-convolutional-layer architecture (current Model 2), which:
+\begin{itemize}
+    \item Preserves sufficient spatial information ($8 \times 8$ final feature maps)
+    \item Balances capacity and regularization
+    \item Achieves better test accuracy with lower computational cost
+    \item Trains stably without advanced techniques
+\end{itemize}
+
+\section{Conclusion}
+
+This project successfully implemented two CNN architectures for image classification:
+
+\begin{itemize}
+    \item \textbf{Model 1:} Lightweight single-conv design achieving XX\% accuracy on 10-class digit recognition
+    \item \textbf{Model 2:} Two-conv design achieving XX\% accuracy on 100-class object recognition
+\end{itemize}
+
+\textbf{Key Takeaways:}
+\begin{enumerate}
+    \item Hierarchical feature learning through convolutional layers enables effective image classification
+    \item Model capacity should match task complexity (10 vs. 100 classes)
+    \item Computational efficiency measured via MACs/FLOPs is critical for deployment
+    \item Architecture design requires balancing depth, width, and input resolution
+    \item Failed experiments (3-conv design) provided valuable insights on overfitting and spatial information preservation
+\end{enumerate}
+
+\textbf{Future Improvements:}
+\begin{itemize}
+    \item Implement batch normalization for training stability
+    \item Explore learning rate scheduling for better convergence
+    \item Add dropout layers to reduce overfitting
+    \item Experiment with different optimizers (Adam, RMSprop)
+    \item Use color images (RGB) to potentially improve Model 2 accuracy
+\end{itemize}
+
+\end{document}

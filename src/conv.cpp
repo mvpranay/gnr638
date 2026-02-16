@@ -17,3 +17,7 @@ std::shared_ptr<Tensor> Conv2D::forward(std::shared_ptr<Tensor> input) {
 std::vector<std::shared_ptr<Tensor>> Conv2D::parameters() {
     return {weights, bias};
 }
+
+int Conv2D::param_count() {
+    return weights->data.size() + bias->data.size();
+}

@@ -14,3 +14,7 @@ std::shared_ptr<Tensor> Linear::forward(std::shared_ptr<Tensor> input) {
 std::vector<std::shared_ptr<Tensor>> Linear::parameters() {
     return {weights, bias};
 }
+
+int Linear::param_count() {
+    return weights->data.size() + bias->data.size();
+}
