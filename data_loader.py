@@ -71,9 +71,11 @@ class ImageFolderDataset:
         if self.shuffle:
             random.shuffle(self.samples)
 
-        total_start_time = time.time()
+        loading_time = 0
 
         for i in range(0, len(self.samples), self.batch_size):
+            start = time.time()
+            
             batch = self.samples[i:i + self.batch_size]
 
             flat_batch_data = []
@@ -104,11 +106,13 @@ class ImageFolderDataset:
                 flat_batch_data,
                 [len(labels), 1, IMG_HEIGHT, IMG_WIDTH]
             )
+            
+            end = time.time()
+            loading_time += end - start
 
             yield tensor_x, labels
 
-        total_loading_time = time.time() - total_start_time
-        print(f"Total dataset loading time: {total_loading_time:.4f} seconds")
+        print(f"Total dataset loading time: {loading_time:.4f} seconds")
 
     # ---------------------------------------------------------
     # Dataset length
