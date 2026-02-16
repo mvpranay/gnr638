@@ -11,36 +11,63 @@ IMG_WIDTH = 32
 class ImageFolderDataset:
     """
     Custom dataset loader for:
-    - 0-9 folder structured datasets
+    - Any folder structured datasets with string labels
     - Converts images to grayscale
     - Resizes to IMG_HEIGHT x IMG_WIDTH
     - Returns batches as APDNN.Tensor
+    - Maps string labels to integer indices
     - Measures disk loading time
     """
 
-    def __init__(self, data_dir, batch_size=32, shuffle=True, augment=False):
+    def __init__(self, data_dir, label_to_idx=None, batch_size=32, shuffle=True, augment=False):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.augment = augment
+        self.label_to_idx = label_to_idx  # Map string label -> int
 
-        self.samples = []   # (filepath, label)
+        self.samples = []   # (filepath, label_idx)
         self._index_dataset()
 
     # ---------------------------------------------------------
     # Index dataset (scan folder structure)
     # ---------------------------------------------------------
     def _index_dataset(self):
+        # Build a label mapping for non-numeric folder names if none is provided
+        if self.label_to_idx is None:
+            folder_names = [
+                name for name in os.listdir(self.data_dir)
+                if os.path.isdir(os.path.join(self.data_dir, name))
+            ]
+
+            # If any folder name is non-numeric, map all folder names to indices
+            has_non_numeric = False
+            for name in folder_names:
+                try:
+                    int(name)
+                except ValueError:
+                    has_non_numeric = True
+                    break
+
+            if has_non_numeric:
+                self.label_to_idx = {name: idx for idx, name in enumerate(sorted(folder_names))}
+
         for label_name in os.listdir(self.data_dir):
             label_path = os.path.join(self.data_dir, label_name)
 
             if not os.path.isdir(label_path):
                 continue
 
-            try:
-                label = int(label_name)
-            except ValueError:
-                continue
+            # Try to get label index from mapping, or parse as int
+            if self.label_to_idx is not None:
+                if label_name not in self.label_to_idx:
+                    continue
+                label = self.label_to_idx[label_name]
+            else:
+                try:
+                    label = int(label_name)
+                except ValueError:
+                    continue
 
             for file_name in os.listdir(label_path):
                 if file_name.lower().endswith((".png", ".jpg", ".jpeg")):

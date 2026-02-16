@@ -2,6 +2,13 @@ import time
 import gc
 import APDNN
 from data_loader import ImageFolderDataset
+import sys
+
+if len(sys.argv) > 1:
+    data_dir = sys.argv[1]
+else:
+    print("Usage: python cnn_model.py <data_dir>")
+    sys.exit(1)
 
 # Set random seed for reproducibility
 APDNN.set_random_seed(42)
@@ -13,7 +20,7 @@ print("=" * 60)
 # Load datasets (grayscale, 0-9 folders)
 print("\nLoading training data...")
 train_dataset = ImageFolderDataset(
-    data_dir="data_1",
+    data_dir=data_dir,
     batch_size=32,
     shuffle=True,
     augment=True  # Enable augmentation
@@ -98,7 +105,7 @@ eval_start = time.time()
 
 print("\nLoading test data...")
 test_dataset = ImageFolderDataset(
-    data_dir="data_1",
+    data_dir=data_dir,
     batch_size=64,
     shuffle=False,
     augment=False
