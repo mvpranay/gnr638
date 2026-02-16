@@ -14,3 +14,15 @@ python3 setup.py build_ext --inplace
 ```bash
 import APDNN
 ```
+
+## Usage
+
+- To use model1:
+```bash
+python3 cnn_model.py <data_dir>
+```
+
+- To use model2:
+```bash
+python3 cnn_model2.py <data_dir>
+```
