@@ -1,0 +1,89 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\title{Computational Budget Report\\
+\large GNR 638 Assignment 2}
+\author{Avinash Chaudhari, Pranay Marumamula}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Compute Environment}
+Final reported runs were executed on Kaggle with the following available resources:
+\begin{itemize}
+    \item GPU: T4$\times$2 (total available VRAM reported: 57.6 GB)
+    \item System RAM: 30 GB
+    \item Epoch time (user-reported): 30--60 seconds per epoch
+\end{itemize}
+
+\section{Scope}
+This budget includes \textbf{only final reported runs} in the main report and excludes exploratory/aborted runs.
+
+\section{Run Accounting}
+Based on the final report configuration:
+\begin{itemize}
+    \item Linear probe transfer: 3 models $\times$ 30 epochs = 90 epochs
+    \item Fine-tuning strategies: 3 models $\times$ 4 strategies $\times$ 20 epochs = 240 epochs
+    \item Few-shot learning: 3 models $\times$ 3 data regimes $\times$ 20 epochs = 180 epochs
+\end{itemize}
+
+Total training epochs counted:
+\[
+E_{\text{total}} = 90 + 240 + 180 = 510 \text{ epochs}
+\]
+
+\section{Wall-Clock Estimate}
+Using the reported epoch-time range:
+\[
+T_{\text{min}} = 510 \times 30\text{s} = 15{,}300\text{s} \approx 4.25\text{ h}
+\]
+\[
+T_{\text{max}} = 510 \times 60\text{s} = 30{,}600\text{s} \approx 8.50\text{ h}
+\]
+
+So the estimated training wall-clock for final runs is:
+\[
+\boxed{4.25\text{ to }8.50\text{ hours}}
+\]
+
+\section{Accelerator-Hour Estimate}
+If both T4 GPUs are reserved during these runs, accelerator-hours are:
+\[
+\text{GPU-hours} = T_{\text{wall}} \times 2
+\]
+
+Hence:
+\[
+\boxed{8.5\text{ to }17.0\text{ GPU-hours (T4-equivalent)}}
+\]
+
+\section{Experiment-wise Budget Split}
+\begin{table}[h!]
+\centering
+\caption{Estimated compute budget by experiment group (final runs only).}
+\begin{tabular}{lccc}
+\toprule
+Experiment Group & Epochs & Wall-Clock (h) & T4 GPU-hours ($\times 2$) \\
+\midrule
+Linear probe transfer & 90  & 0.75--1.50 & 1.50--3.00 \\
+Fine-tuning strategies & 240 & 2.00--4.00 & 4.00--8.00 \\
+Few-shot learning & 180 & 1.50--3.00 & 3.00--6.00 \\
+\midrule
+Total & 510 & 4.25--8.50 & 8.50--17.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Notes and Assumptions}
+\begin{itemize}
+    \item Per-epoch time is modeled as a constant 30--60 s across all final runs, which may not reflect variability due to model size, batch size, or data regime.
+    \item Layer-wise probing and corruption evaluation are primarily feature-extraction/inference workloads and are not included in the epoch-based training budget above.
+    \item Kaggle usage may be free-tier for the user account; therefore direct monetary cost can be treated as zero for this report, while compute-equivalent cost is represented in GPU-hours.
+\end{itemize}
+
+\end{document}
