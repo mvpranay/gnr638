@@ -4,6 +4,8 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
 \usepackage{amsmath,amssymb}
 \usepackage{enumitem}
 \usepackage{hyperref}
@@ -26,7 +28,7 @@
 \maketitle
 
 \begin{abstract}
-This report presents a comprehensive evaluation of pre-trained convolutional neural network (CNN) representations for remote sensing image classification. We analyze three backbones (ResNet50, EfficientNet-B0, ConvNeXt-Tiny) across few-shot learning, layer-wise feature probing, linear probe transfer, and corruption robustness on the Aerial Image Dataset. Results show clear trade-offs: EfficientNet-B0 is most data-efficient in few-shot settings, ConvNeXt-Tiny provides the strongest robustness under corruption and the best probe accuracy at middle depth, and ResNet50 achieves very high linear-probe transfer performance on the available logged run. Overall, the experiments highlight that optimal representation quality depends on the target criterion (data efficiency, separability across depth, or robustness under distribution shift).
+This report presents a comprehensive evaluation of pre-trained convolutional neural network (CNN) representations for remote sensing image classification. We analyze three backbones (ResNet50, EfficientNet-B0, ConvNeXt-Tiny) across linear probe transfer, fine-tuning strategy comparison (linear probe, last-block, selective unfreezing, full fine-tuning), few-shot learning, layer-wise feature probing, and corruption robustness on the Aerial Image Dataset. Results show clear trade-offs: EfficientNet-B0 is most data-efficient in few-shot settings, fine-tuning outcomes are model-dependent (ResNet50: last-block/selective tie; EfficientNet-B0: full fine-tuning best; ConvNeXt-Tiny: selective best), ConvNeXt-Tiny provides the strongest robustness under corruption and the best probe accuracy at middle depth, and ResNet50 achieves very high linear-probe transfer performance on the available logged run. Overall, the experiments highlight that optimal representation quality depends on the target criterion (data efficiency, adaptation budget, separability across depth, or robustness under distribution shift).
 \end{abstract}
 
 \tableofcontents
@@ -36,12 +38,13 @@ This report presents a comprehensive evaluation of pre-trained convolutional neu
 \subsection{Background}
 Remote sensing scene classification is a transfer-learning-heavy problem because labeled aerial datasets are much smaller than large-scale natural image corpora such as ImageNet. In this assignment, we study how effectively ImageNet pre-trained CNN backbones transfer to AID (30-class aerial scene classification) under practical constraints such as limited supervision and distribution shift. The selected backbones represent different design families: residual connections (ResNet50), compound scaling (EfficientNet-B0), and modernized convolutional design (ConvNeXt-Tiny).
 
-To evaluate representation quality beyond a single clean accuracy number, we follow a multi-scenario protocol implemented in our codebase: (i) linear probe transfer with a frozen backbone and trainable final classifier, (ii) few-shot analysis by training on $100\%$, $20\%$, and $5\%$ of training data, (iii) layer-wise probing using linear classifiers on early/middle/final intermediate features, and (iv) corruption robustness testing under Gaussian noise, motion blur, and brightness shift. Together, these analyses characterize transferability, data efficiency, feature hierarchy, and robustness sensitivity of pre-trained representations.
+To evaluate representation quality beyond a single clean accuracy number, we follow a multi-scenario protocol implemented in our codebase: (i) linear probe transfer with a frozen backbone and trainable final classifier, (ii) fine-tuning strategy comparison (linear probe vs partial/full unfreezing), (iii) few-shot analysis by training on $100\%$, $20\%$, and $5\%$ of training data, (iv) layer-wise probing using linear classifiers on early/middle/final intermediate features, and (v) corruption robustness testing under Gaussian noise, motion blur, and brightness shift. Together, these analyses characterize transferability, adaptation-efficiency trade-offs, data efficiency, feature hierarchy, and robustness sensitivity of pre-trained representations.
 
 \subsection{Objectives}
 The main objectives of this report are:
 \begin{itemize}
 	\item Compare the transfer performance of ResNet50, EfficientNet-B0, and ConvNeXt-Tiny on AID using a consistent training and evaluation protocol.
+	\item Compare fine-tuning strategies (linear probe, last-block unfreezing, selective unfreezing, and full fine-tuning) under matched optimization settings.
 	\item Quantify data efficiency in few-shot regimes ($100\%$, $20\%$, $5\%$ train data) and measure relative performance drop and training-validation gap.
 	\item Evaluate linear-probe transferability by freezing the backbone and training only the final linear head.
 	\item Analyze semantic abstraction across depth via layer-wise feature probing (early, middle, final layers) using linear classifiers and feature statistics.
@@ -99,13 +102,13 @@ The main transfer metric reported is validation accuracy. Class separability and
 		Model & Best Val Acc (\%) & Final Test/Val Acc (\%) \\
 		\midrule
 		ResNet50 & 98.28 & 98.28 \\
-		EfficientNet-B0 & Not exported in text log & Not exported in text log \\
-		ConvNeXt-Tiny & Not exported in text log & Not exported in text log \\
+		EfficientNet-B0 & 87.37 & 87.37 \\
+		ConvNeXt-Tiny & 95.28 & 95.28 \\
 		\bottomrule
 	\end{tabular}
 \end{table}
 
-From the available numeric log (ResNet50), linear-probe transfer is very strong, with peak and final validation accuracy both reaching $98.28\%$. For EfficientNet-B0 and ConvNeXt-Tiny, checkpoint diagnostics (confusion matrix, PCA, t-SNE, and training-validation curves) are available in the folder and indicate strong class separation overall; exact epoch-wise numeric arrays were not exported as plain-text logs in the current artifacts.
+Based on the values summarized in Table 3.1, linear-probe transfer is strongest for ResNet50 ($98.28\%$), followed by ConvNeXt-Tiny ($95.28\%$), and then EfficientNet-B0 ($87.37\%$). For all three models, the reported best and final validation values are identical in the exported artifacts, indicating stable end-of-training performance in these runs.
 
 \subsubsection*{ResNet50 linear-probe plots}
 \begin{figure}[H]
@@ -183,7 +186,7 @@ From the available numeric log (ResNet50), linear-probe transfer is very strong,
 \end{figure}
 
 \subsection{Training Dynamics}
-Across all three models, training-validation curves show rapid early improvement followed by stabilization, consistent with strong transfer from ImageNet-pretrained features. The ResNet50 log confirms a high final train accuracy (99.75\%) and high final validation accuracy (98.28\%), indicating limited generalization gap in this setting.
+Across all three models, training-validation curves show rapid early improvement followed by stabilization, consistent with strong transfer from ImageNet-pretrained features. The final validation accuracy is highest for ResNet50 (98.28\%), followed by ConvNeXt-Tiny (95.28\%), and EfficientNet-B0 (87.37\%).
 
 Confusion matrices indicate that most classes are well recognized, while residual errors are concentrated in visually similar scene categories (for example, dense/medium/sparse residential and some land-cover classes). PCA and t-SNE plots show largely separable class clusters with partial overlap among semantically close classes, which is expected for linear probing on aerial scenes.
 
@@ -360,6 +363,8 @@ EfficientNet-B0 is the most data-efficient backbone in our few-shot setting. It 
 
 The training-validation gap grows for all models as data reduces, indicating stronger overfitting in low-data regimes. This increase is largest for ResNet50 (0.1075 to 0.4398) and smallest for EfficientNet-B0 (0.0613 to 0.2782). Overall, these results suggest that EfficientNet-B0 transfers more robustly with limited supervision, while deeper adaptation or regularization may be necessary to stabilize ResNet50 at $5\%$ data.
 
+These few-shot observations are consistent with the fine-tuning strategy results: constrained adaptation (e.g., selective unfreezing) is likely preferable to full fine-tuning in low-data settings where overfitting risk is high.
+
 \section{Corruption Robustness Evaluation}
 \subsection{Methodology}
 Robustness was evaluated using the notebook in \texttt{corruption\_robustness\_evaluation/corruption-eval.ipynb}. Corruptions are applied only at evaluation time on normalized inputs by temporarily de-normalizing, applying the corruption in image space, clamping to $[0,1]$, and re-normalizing.
@@ -412,6 +417,8 @@ The strongest degradation comes from Gaussian noise (especially $\sigma=0.2$) an
 
 Brightness shift is the least harmful corruption for all three models, and accuracies remain close to clean performance with relative robustness close to one. Geometric and texture distortions (blur and high noise) are therefore more challenging than global intensity changes for these pretrained backbones on the Aerial Image Dataset.
 
+In relation to fine-tuning strategies, this suggests a useful follow-up: compare corruption robustness after selective unfreezing versus full fine-tuning to test whether the same regularization benefit also improves out-of-distribution stability.
+
 \section{Layer-Wise Feature Probing}
 \subsection{Methodology}
 We probe representation quality at multiple depths by extracting intermediate activations from each frozen ImageNet-pretrained backbone and training a separate linear classifier per depth. For each selected layer output, spatial feature maps are converted to vectors through global average pooling, and a logistic-regression probe is trained on training features and evaluated on validation features.
@@ -455,6 +462,8 @@ In addition to validation accuracy versus depth, we report feature-norm statisti
 \end{table}
 
 Across models, semantic separability improves strongly from early to deeper blocks. ResNet50 and ConvNeXt-Tiny peak at the middle depth, then slightly decrease at final depth, while EfficientNet-B0 improves monotonically and peaks at the final block. This indicates that optimal transfer features are architecture-dependent and not always at the deepest layer.
+
+This layer-wise pattern also supports the fine-tuning findings: unfreezing targeted middle/deep blocks is more effective than unfreezing the full network, because the most transferable discriminative information is concentrated in specific depths.
 
 Feature-norm statistics also show non-trivial depth behavior. For ResNet50, mean norm decreases toward final depth with higher spread in final features (std $\approx 2.75$). EfficientNet-B0 shows a high-norm middle representation before final consolidation. ConvNeXt-Tiny exhibits very low-norm early/final features with a high-norm middle layer, matching its strongest probing accuracy at middle depth.
 
@@ -519,39 +528,48 @@ Feature-norm statistics also show non-trivial depth behavior. For ResNet50, mean
 \begin{table}[H]
 	\centering
 	\caption{Unified comparison across reported tasks (three selected backbones).}
-	\begin{tabular}{lcccc}
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{lccccc}
 		\toprule
-		Model & Few-Shot Score & Probe Score & Transfer Score & Robustness Score \\
+		Model & Few-shot Acc@5\% & Best Probe Acc & Transfer Val Acc & Best FT Val Acc (strategy) & Mean Corrupt Acc \\
 		\midrule
-		ResNet50 & 50.29 (Acc@5\%) & 94.92 (best probe acc) & 98.28 (val acc) & 59.64 (mean corrupt acc) \\
-		EfficientNet-B0 & 70.03 (Acc@5\%) & 92.92 (best probe acc) & strong (plots only) & 25.64 (mean corrupt acc) \\
-		ConvNeXt-Tiny & 61.87 (Acc@5\%) & 95.35 (best probe acc) & strong (plots only) & 68.36 (mean corrupt acc) \\
+		ResNet50 & 50.29 & 94.92 & 98.28 & 95.52 (last/selective) & 59.64 \\
+		EfficientNet-B0 & 70.03 & 92.92 & 87.37 & 96.38 (full FT) & 25.64 \\
+		ConvNeXt-Tiny & 61.87 & 95.35 & 95.28 & 96.90 (selective) & 68.36 \\
 		\bottomrule
-	\end{tabular}
+	\end{tabular}%
+	}
 \end{table}
 
 Overall ranking by task is not identical: EfficientNet-B0 leads few-shot data efficiency, ConvNeXt-Tiny leads probing depth quality and robustness, and ResNet50 shows excellent logged linear-probe transfer. This supports the central conclusion that no single backbone dominates all criteria under the same dataset and protocol.
+
+From the fine-tuning comparison, a practical insight is that the optimal adaptation budget is architecture-dependent: constrained unfreezing is competitive or best for ResNet50/ConvNeXt-Tiny, while EfficientNet-B0 benefits most from full fine-tuning in this run.
 
 \section{Conclusion and Future Work}
 Key conclusions from this study are:
 \begin{itemize}
 	\item \textbf{Few-shot:} EfficientNet-B0 is most data-efficient, with the highest $5\%$-data validation accuracy and smallest relative drop.
+	\item \textbf{Fine-tuning strategies:} The best strategy is model-dependent: ResNet50 performs best with last-block/selective unfreezing (tie at 95.52\%), EfficientNet-B0 peaks with full fine-tuning (96.38\%), and ConvNeXt-Tiny peaks with selective unfreezing (96.90\%).
 	\item \textbf{Layer-wise probing:} Mid-to-late representations are substantially more separable than early features; ConvNeXt-Tiny attains the best peak probe accuracy.
 	\item \textbf{Linear transfer:} Frozen-pretrained features are highly transferable on AID, with ResNet50 reaching very high logged validation performance.
 	\item \textbf{Robustness:} ConvNeXt-Tiny is most robust to corruption overall, while EfficientNet-B0 is highly sensitive to Gaussian noise.
-	\item \textbf{Cross-task insight:} Backbone selection should be objective-driven (data efficiency vs robustness vs transfer), rather than based on a single metric.
+	\item \textbf{Cross-task insight:} Backbone and adaptation strategy should be objective-driven (data efficiency vs robustness vs transfer vs parameter budget), rather than based on a single metric.
 \end{itemize}
 
 Main limitations of the current study are:
 \begin{itemize}
-	\item Some linear-probe numeric logs were not exported as text for all models, so part of the transfer comparison relies on plot-based qualitative evidence.
-	\item Fine-tuning strategy analysis (linear probe vs partial unfreezing vs full fine-tuning) is intentionally deferred and therefore excluded from cross-task conclusions.
+	\item Corruption robustness was evaluated at model level, but not recomputed for each fine-tuning strategy (linear probe, last-block, selective, full); therefore strategy-level robustness conclusions remain indirect.
+	\item Protocols differ across sections (e.g., $70/30$ for transfer/fine-tuning vs $80/20$ for few-shot/probing), which is suitable for assignment tasks but limits strict cross-section comparability.
+	\item Robustness coverage is limited to three corruption families (Gaussian noise, motion blur, brightness), and does not include additional real-world shifts such as compression artifacts, haze, scale/viewpoint variation, or seasonal changes.
+	\item Results are from single-seed runs per setting in the current report; uncertainty estimates (mean$\pm$std across multiple seeds) are not reported.
 \end{itemize}
 
 Future work directions include:
 \begin{itemize}
-	\item Complete and integrate fine-tuning strategy experiments with consistent logging of convergence and robustness changes.
-	\item Add stronger robustness-oriented training interventions (e.g., corruption augmentation, adversarial-style noise training, or domain adaptation for aerial imagery).
+	\item Re-run corruption evaluation for every fine-tuning strategy and report strategy-specific robustness metrics (mCE, relative robustness, and calibration under shift).
+	\item Standardize train/validation protocols across sections and add multi-seed evaluation to improve fairness and statistical confidence.
+	\item Expand distribution-shift benchmarks to additional corruptions and domain shifts relevant to aerial imagery (weather, compression, resolution, viewpoint, and temporal shift).
+	\item Investigate robustness-oriented adaptation methods (corruption augmentation, SAM/weight averaging, adversarial-style training, and domain adaptation) and compare their trade-offs against clean accuracy.
 \end{itemize}
 
 \begin{thebibliography}{9}
