@@ -1,4 +1,11 @@
 main
 build/*
 obj/*
-*.so
+**/*.so
+A2/train_data
+**/*.pth
+**/*.aux
+**/*.log	
+**/*.out
+**/*.toc
+

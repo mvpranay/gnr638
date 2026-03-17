@@ -1,0 +1,17 @@
+100% Data Regime:
+  Validation Accuracy: 0.8720
+  Training Accuracy: 0.9794
+  Train-Val Gap: 0.1075
+
+20% Data Regime:
+  Validation Accuracy: 0.6667
+  Training Accuracy: 0.9580
+  Train-Val Gap: 0.2913
+
+5% Data Regime:
+  Validation Accuracy: 0.5029
+  Training Accuracy: 0.9427
+  Train-Val Gap: 0.4398
+
+Relative Performance Drop (Δ): 0.4233
+Performance degradation from 100% to 5%: 42.33%
